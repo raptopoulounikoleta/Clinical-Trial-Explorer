@@ -1,0 +1,11 @@
+Patient_ID,Age,Treatment,Tumor_Size_Start,Tumor_Size_End
+P001,45,Drug,5.2,3.1
+P002,62,Drug,4.8,4.5
+P003,55,Placebo,6.1,6.8
+P004,71,Drug,7.0,5.0
+P005,38,Placebo,4.5,4.9
+P006,68,Drug,5.5,2.1
+P007,51,Drug,3.9,1.5
+P008,75,Placebo,6.3,7.1
+P009,58,Drug,4.1,2.0
+P010,82,Placebo,5.0,5.5
