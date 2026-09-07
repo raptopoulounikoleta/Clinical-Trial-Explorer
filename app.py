@@ -1,50 +1,83 @@
 import streamlit as st
 import pandas as pd
 
-# 1. App Title
+# 1. App Title & Layout
+st.set_page_config(page_title="Clinical Trial Dashboard", layout="wide")
 st.title("Clinical Trial Dashboard")
 
-# 2. Read the data
-my_data = pd.read_csv("patients_data.csv")
+# ==========================================
+# NEW: FILE UPLOADER
+# ==========================================
+st.sidebar.header("📂 Upload Data")
+# This creates the drag & drop area in the sidebar
+uploaded_file = st.sidebar.file_uploader("Upload your own CSV file", type=["csv"])
+
+# 2. Read the data (Dynamic)
+if uploaded_file is not None:
+    # If user uploads a file, read that file
+    my_data = pd.read_csv(uploaded_file)
+    st.sidebar.success("File successfully uploaded!")
+else:
+    # If no file is uploaded, use the default local file
+    my_data = pd.read_csv("patients_data.csv")
+    st.sidebar.info("Using default patient data. Upload a file to replace it.")
 
 # ==========================================
-# NEW SECTION: VISUALIZATION & KPIs
+# PROFESSIONAL SIDEBAR (Filters)
 # ==========================================
-st.header("📊 Trial Overview")
+st.sidebar.header("⚙️ Filter Data")
 
-# Create 3 columns for our metrics
-col1, col2, col3 = st.columns(3)
+# Safety Check: Make sure the required columns exist
+if 'Age' in my_data.columns and 'Treatment' in my_data.columns:
+    
+    # Filter 1 (Slider) - Now dynamic based on the data!
+    min_age = int(my_data['Age'].min())
+    max_age = int(my_data['Age'].max())
+    selected_age = st.sidebar.slider("Minimum Patient Age:", min_value=min_age, max_value=max_age, value=min_age)
 
-# Pandas calculations (using my_data)
-total_patients = len(my_data)
-avg_age = round(my_data['Age'].mean(), 1)
-total_treatments = my_data['Treatment'].nunique()
+    # Filter 2 (Multiselect)
+    treatment_options = my_data['Treatment'].unique()
+    selected_treatments = st.sidebar.multiselect(
+        "Select Treatment Groups:",
+        options=treatment_options,
+        default=treatment_options
+    )
 
-# Display Metrics (KPIs)
-col1.metric("Total Patients", total_patients)
-col2.metric("Average Age", f"{avg_age} yrs")
-col3.metric("Treatment Groups", total_treatments)
+    # Apply the filters
+    condition = (my_data['Age'] >= selected_age) & (my_data['Treatment'].isin(selected_treatments))
+    filtered_data = my_data[condition]
 
-st.divider() # Adds a clean divider line
+    # ==========================================
+    # MAIN PAGE: VISUALIZATION & KPIs
+    # ==========================================
+    st.header("📊 Trial Overview")
 
-st.subheader("Patient Distribution by Treatment")
-# Count treatments and create a Bar Chart
-treatment_counts = my_data['Treatment'].value_counts()
-st.bar_chart(treatment_counts)
+    col1, col2, col3 = st.columns(3)
 
-st.divider() # Adds another divider line
+    total_patients = len(filtered_data)
+    avg_age = round(filtered_data['Age'].mean(), 1) if not filtered_data.empty else 0
+    total_treatments = filtered_data['Treatment'].nunique()
 
-# ==========================================
-# OLD SECTION: FILTERS & TABLE
-# ==========================================
-st.subheader("Explore Patient Data")
+    col1.metric("Total Patients", total_patients)
+    col2.metric("Average Age", f"{avg_age} yrs")
+    col3.metric("Treatment Groups", total_treatments)
 
-# Interactive tool (Slider)
-selected_age = st.slider("Minimum Patient Age:", min_value=18, max_value=100, value=50)
+    st.divider()
 
-# Custom logic (Data Wrangling)
-condition = (my_data['Treatment'] == 'Drug') & (my_data['Age'] > selected_age)
+    st.subheader("Patient Distribution by Treatment")
+    if not filtered_data.empty:
+        treatment_counts = filtered_data['Treatment'].value_counts()
+        st.bar_chart(treatment_counts)
+    else:
+        st.warning("No data matches the selected filters.")
 
-# Filter and display on screen
-filtered_patients = my_data[condition]
-st.dataframe(filtered_patients)
+    st.divider()
+
+    # ==========================================
+    # RAW DATA TABLE
+    # ==========================================
+    st.subheader("Explore Patient Data")
+    st.dataframe(filtered_data)
+else:
+    # Error message if the uploaded CSV is wrong
+    st.error("The uploaded CSV must contain 'Age' and 'Treatment' columns to work with this dashboard.")
